@@ -27,7 +27,7 @@ module SPF
       end
 
       # check for SPF in the TXT records
-      ["_spf.#{domain}", domain].each do |host|
+      [domain, "_spf.#{domain}"].each do |host|
         begin
           records = resolver.getresources(host, Resolv::DNS::Resource::IN::TXT)
 
