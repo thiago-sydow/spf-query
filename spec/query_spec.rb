@@ -14,8 +14,8 @@ describe SPF::Query do
     context "when _spf.domain.com exists" do
       let(:domain) { 'google.com' }
 
-      it "should return the first SPF record" do
-        expect(subject.query(domain)).to be == %{v=spf1 include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com ~all}
+      it "should return the queried domain SPF record first instead of _spf.domain" do
+        expect(subject.query(domain)).to be == %{v=spf1 include:_spf.google.com ~all}
       end
     end
 
