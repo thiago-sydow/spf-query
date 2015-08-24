@@ -12,12 +12,15 @@ module SPF
     # @param [Resolv::DNS] resolver
     #   The optional resolver to use.
     #
+    # @param [Integer] max_lookups
+    #   Max inner lookups to search.
+    #
     # @return [String, nil]
     #   The SPF record or `nil` if there is none.
     #
     # @api semipublic
     #
-    def self.query(domain,resolver=Resolv::DNS.new)
+    def self.query(domain,resolver=Resolv::DNS.new, max_lookups=1)
       # check for an SPF record on the domain
       begin
         record = resolver.getresource(domain, Resolv::DNS::Resource::IN::SPF)
@@ -26,8 +29,28 @@ module SPF
       rescue Resolv::ResolvError
       end
 
-      # check for SPF in the TXT records
-      [domain, "_spf.#{domain}"].each do |host|
+      query_result = process_domains([domain, "_spf.#{domain}"], resolver)
+      return nil unless query_result
+
+      return_text = query_result[:text]
+      additional_domains = query_result[:included]
+
+      if additional_domains
+        i = 1
+        while i < max_lookups
+          additional_result = process_domains(additional_domains, resolver)
+          break unless additional_result
+          return_text << " #{additional_result[:text]}"
+          additional_domains = additional_result[:included]
+          i += 1
+        end
+      end
+
+      return return_text.split(' ').uniq.join(' ')
+    end
+
+    def self.process_domains(domains, resolver)
+      domains.each do |host|
         begin
           records = resolver.getresources(host, Resolv::DNS::Resource::IN::TXT)
 
@@ -35,7 +58,8 @@ module SPF
             txt = record.strings.join
 
             if txt.include?('v=spf1')
-              return txt
+              domains = txt.scan(/include:([^\s]+)/)
+              return { text: txt, included: domains.flatten.compact.uniq }
             end
           end
         rescue Resolv::ResolvError
@@ -44,5 +68,6 @@ module SPF
 
       return nil
     end
+
   end
 end
