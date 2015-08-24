@@ -34,5 +34,15 @@ describe SPF::Query do
         expect(subject.query(domain)).to be_nil
       end
     end
+
+    context "when max_lookups is greater than 1" do
+      let(:domain) { 'google.com' }
+
+      subject { SPF::Query.query(domain, Resolv::DNS.new, 2) }
+
+      it "should return recursively by the value set" do
+        is_expected.to be == %{v=spf1 include:_spf.google.com ~all include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com}
+      end
+    end
   end
 end
