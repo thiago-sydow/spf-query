@@ -1,6 +1,6 @@
 require 'resolv'
 require 'resolv/dns/resource/in/spf'
-require 'byebug'
+
 module SPF
   module Query
     #
@@ -29,24 +29,19 @@ module SPF
       rescue Resolv::ResolvError
       end
 
-      query_result = process_domains(["_spf.#{domain}", domain], resolver)
-      return nil if query_result[:text].empty?
+      domains = ["_spf.#{domain}", domain]
+      return_text = ''
 
-      return_text = query_result[:text]
-      additional_domains = query_result[:included]
-
-      if additional_domains
-        i = 1
-        while i < max_lookups
-          additional_result = process_domains(additional_domains, resolver)
-          break unless additional_result
-          return_text << additional_result[:text]
-          additional_domains = additional_result[:included]
-          i += 1
-        end
+      for i in 1..max_lookups
+        result = process_domains(domains, resolver)
+        break if result[:text].empty?
+        return_text << result[:text]
+        domains = result[:included]
       end
 
-      return return_text.split(' ').uniq.join(' ')
+      return nil if return_text.empty?
+
+      return_text.split(' ').uniq.join(' ')
     end
 
     def self.process_domains(domains, resolver)
