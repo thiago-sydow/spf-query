@@ -1,6 +1,6 @@
 require 'resolv'
 require 'resolv/dns/resource/in/spf'
-
+require 'byebug'
 module SPF
   module Query
     #
@@ -30,7 +30,7 @@ module SPF
       end
 
       query_result = process_domains(["_spf.#{domain}", domain], resolver)
-      return nil unless query_result
+      return nil if query_result[:text].empty?
 
       return_text = query_result[:text]
       additional_domains = query_result[:included]
@@ -40,7 +40,7 @@ module SPF
         while i < max_lookups
           additional_result = process_domains(additional_domains, resolver)
           break unless additional_result
-          return_text << " #{additional_result[:text]}"
+          return_text << additional_result[:text]
           additional_domains = additional_result[:included]
           i += 1
         end
@@ -50,6 +50,8 @@ module SPF
     end
 
     def self.process_domains(domains, resolver)
+      result_hash = { text: '', included: [] }
+
       domains.each do |host|
         begin
           records = resolver.getresources(host, Resolv::DNS::Resource::IN::TXT)
@@ -59,14 +61,15 @@ module SPF
 
             if txt.include?('v=spf1')
               domains = txt.scan(/include:([^\s]+)/)
-              return { text: txt, included: domains.flatten.compact.uniq }
+              result_hash[:text] << " #{txt}"
+              result_hash[:included] += domains.flatten.compact.uniq
             end
           end
         rescue Resolv::ResolvError
         end
       end
 
-      return nil
+      return result_hash
     end
 
   end
