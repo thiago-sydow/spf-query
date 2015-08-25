@@ -29,7 +29,7 @@ module SPF
       rescue Resolv::ResolvError
       end
 
-      query_result = process_domains([domain, "_spf.#{domain}"], resolver)
+      query_result = process_domains(["_spf.#{domain}", domain], resolver)
       return nil unless query_result
 
       return_text = query_result[:text]
